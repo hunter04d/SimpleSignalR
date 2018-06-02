@@ -1,0 +1,75 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Simple SignalR test</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-beta/css/materialize.min.css">
+</head>
+
+<body>
+    <h1 style="text-align: center;">Simple chat signalR</h1>
+    <div id="app">
+        <div class="container">
+            <form v-on:submit.prevent="submit">
+                <div class="input-field">
+                    <input id="nameInput" type="text" v-model="owner" />
+                    <label for="nameInput">Name:</label>
+                </div>
+                <label for="textarea1">Message:</label>
+                <textarea id="textarea1" class="materialize-textarea" v-model="currentMessage"></textarea>
+                <input class="waves-effect waves-light btn" type="submit" value="Send">
+            </form>
+            <h5>Chat log</h5>
+            <div v-for="message in messages" class="card">
+                <div class="card-content" v-bind:class="{'purple darken-1 white-text': message.owner === owner}">
+                    <p>{{message.content}}</p>
+                </div>
+                <div class="card-action right-align">
+                    by
+                    <strong> {{message.owner}} </strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="lib/signalr.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-beta/js/materialize.min.js"></script>
+    <script>
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/chatHub")
+            .build();
+        const app = new Vue({
+            el: "#app",
+            data: {
+                owner: null,
+                currentMessage: null,
+                messages: []
+            },
+            methods: {
+                submit() {
+                    connection.invoke("SendMessage", { owner: this.owner, content: this.currentMessage });
+                    this.currentMessage = null;
+                },
+            }
+        });
+
+        M.AutoInit();
+        fetch("/api/Messages")
+            .then(v => v.json())
+            .then(v => app.messages.push(...v));
+
+        connection.on("ReceiveMessage",
+            m => {
+                console.log(m);
+                app.messages.push(m);
+            });
+        connection.start().catch(err => console.error(err.toString()));
+
+    </script>
+</body>
+
+</html>
